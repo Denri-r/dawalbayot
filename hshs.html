@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
+        <title>XOX Game</title>
+        <style>
+            :root {
+                --bg: #111827;
+                --panel: #1f2937;
+                --cell: #374151;
+                --text: #f9fafb;
+                --muted: #d1d5db;
+                --accent: #22c55e;
+                --accent-2: #f59e0b;
+                --danger: #ef4444;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: linear-gradient(135deg, #0f172a, var(--bg));
+                color: var(--text);
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            .game {
+                width: min(90vw, 420px);
+                background: rgba(31, 41, 55, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 18px;
+                padding: 24px 20px 18px;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            }
+
+            h1 {
+                margin: 0 0 14px;
+                text-align: center;
+                font-size: clamp(2rem, 5vw, 2.4rem);
+                letter-spacing: 1px;
+            }
+
+            .status {
+                text-align: center;
+                font-size: 1.05rem;
+                min-height: 28px;
+                color: var(--muted);
+                margin-bottom: 18px;
+                font-weight: 600;
+            }
+
+            .board {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                margin-bottom: 18px;
+            }
+
+            .cell {
+                width: 100%;
+                aspect-ratio: 1;
+                border: none;
+                border-radius: 12px;
+                background: var(--cell);
+                color: var(--text);
+                font-size: clamp(2rem, 8vw, 3rem);
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    transform 0.15s ease,
+                    background 0.15s ease;
+            }
+
+            .cell:hover:not(:disabled) {
+                background: #4b5563;
+                transform: translateY(-1px);
+            }
+
+            .cell:disabled {
+                cursor: default;
+            }
+
+            .cell.x {
+                color: #60a5fa;
+            }
+
+            .cell.o {
+                color: #fbbf24;
+            }
+
+            .controls {
+                display: flex;
+                justify-content: center;
+            }
+
+            button.reset {
+                border: none;
+                border-radius: 999px;
+                background: linear-gradient(135deg, var(--accent), #16a34a);
+                color: white;
+                font-weight: 700;
+                font-size: 1rem;
+                padding: 12px 20px;
+                cursor: pointer;
+                transition:
+                    transform 0.15s ease,
+                    opacity 0.15s ease;
+            }
+
+            button.reset:hover {
+                transform: translateY(-1px);
+            }
+
+            .winner {
+                color: var(--accent);
+            }
+
+            .draw {
+                color: var(--accent-2);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="game">
+            <h1>XOX</h1>
+            <div
+                id="status"
+                class="status"
+            >
+                Player X's turn
+            </div>
+
+            <div
+                class="board"
+                id="board"
+                aria-label="Tic-tac-toe board"
+            >
+                <button
+                    class="cell"
+                    aria-label="Cell 1"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 2"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 3"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 4"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 5"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 6"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 7"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 8"
+                ></button>
+                <button
+                    class="cell"
+                    aria-label="Cell 9"
+                ></button>
+            </div>
+
+            <div class="controls">
+                <button
+                    class="reset"
+                    id="resetBtn"
+                    type="button"
+                >
+                    Restart Game
+                </button>
+            </div>
+        </div>
+
+        <script>
+            const cells = Array.from(document.querySelectorAll('.cell'))
+            const statusText = document.getElementById('status')
+            const resetBtn = document.getElementById('resetBtn')
+
+            let board = Array(9).fill('')
+            let currentPlayer = 'X'
+            let gameActive = true
+
+            const winningLines = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6],
+            ]
+
+            function updateStatus(message, type = '') {
+                statusText.textContent = message
+                statusText.className = 'status'
+                if (type) statusText.classList.add(type)
+            }
+
+            function checkWinner() {
+                for (const [a, b, c] of winningLines) {
+                    if (
+                        board[a] &&
+                        board[a] === board[b] &&
+                        board[a] === board[c]
+                    ) {
+                        return { winner: board[a], line: [a, b, c] }
+                    }
+                }
+                return null
+            }
+
+            function handleCellClick(event) {
+                const cell = event.target
+                const index = cells.indexOf(cell)
+
+                if (!gameActive || board[index] || !cell) return
+
+                board[index] = currentPlayer
+                cell.textContent = currentPlayer
+                cell.classList.add(currentPlayer.toLowerCase())
+                cell.disabled = true
+
+                const result = checkWinner()
+
+                if (result) {
+                    gameActive = false
+                    updateStatus(`Player ${result.winner} wins!`, 'winner')
+                    return
+                }
+
+                if (board.every(Boolean)) {
+                    gameActive = false
+                    updateStatus("It's a draw!", 'draw')
+                    return
+                }
+
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X'
+                updateStatus(`Player ${currentPlayer}'s turn`)
+            }
+
+            function resetGame() {
+                board = Array(9).fill('')
+                currentPlayer = 'X'
+                gameActive = true
+
+                cells.forEach((cell) => {
+                    cell.textContent = ''
+                    cell.disabled = false
+                    cell.classList.remove('x', 'o')
+                })
+
+                updateStatus("Player X's turn")
+            }
+
+            cells.forEach((cell) =>
+                cell.addEventListener('click', handleCellClick),
+            )
+            resetBtn.addEventListener('click', resetGame)
+        </script>
+    </body>
+</html>
